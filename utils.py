@@ -73,7 +73,9 @@ class TaskManager(object):
             # 置为消费
             ExcelTool().write_columnValue_withTaskId_toExcel(model.taskId, 14, "1")
 
-        print(f"😄执行定时任务:【{model.taskId}】，任务详情：{model.circleTimeStr} {model.timeStr} {model.eventStr}")
+        print(
+            f"😄执行定时任务:【{model.taskId}】，任务详情：{model.circleTimeStr} {model.timeStr} {model.eventStr}
+        ")
         # 回调定时任务执行
         self.timeTaskFunc(model)
 
@@ -111,7 +113,8 @@ class JsonOP(object):
         return file_path
 
     def createJson(self, file_name: str = __file_name):
-        pass
+        with open(file_name, "w") as file:
+            json.dump({}, file)
 
     def readJson(self, file_name: str = __file_name):
         dir_name = os.path.dirname(__file__)
@@ -125,7 +128,5 @@ class JsonOP(object):
     def saveJson(self, file_name: str = __file_name, tasks: dict = {}):
         dir_name = os.path.dirname(__file__)
         file_path = os.path.join(dir_name, file_name)
-        if not os.path.exists(file_path):
-            self.createJson(self.__file_name)
-        with open(file_path, "r") as file:
+        with open(file_path, "w") as file:
             json.dump(tasks, file)
