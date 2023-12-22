@@ -39,18 +39,57 @@ class Countdown(Plugin):
             content = content.replace(f"{command_prefix}", "", 1).strip()
 
             if content.startswith("run"):
-                self.runTask(content.replace("run", "", 1), e_context)
+                self.runTask(content, e_context)
             elif content.startswith("add"):
-                self.addTask(content.replace("add", "", 1), e_context)
+                self.addTask(content, e_context)
             elif content.startswith("rm"):
-                self.rmTask(content.replace("rm", "", 1), e_context)
+                self.rmTask(content, e_context)
             elif content.startswith("ls"):
-                self.lsTask(content.replace("ls", "", 1), e_context)
+                self.lsTask(content, e_context)
             else:
                 # return help
                 pass
 
     def runTask(self, content, e_context: EventContext):
+        # 任务编号
+        taskId = content.split(" ")[1]
+
+        task_dict = self.taskManager.readTask()
+
+        if taskId in task_dict:
+            # taskInfo格式：
+            # 0：任务ID
+            # 1：时间信息 - 格式为：%Y-%m-%d    eg:2023-12-1
+            # 2：备注内容
+            # 3：自定义消息内容 - 使用“x”占位，如“距离考试还有x天”
+            taskInfo = task_dict[taskId]
+            logger.debug(f"执行任务{taskInfo[0]}")
+
+            dateStr = taskInfo[1]
+            date = datetime.strptime(dateStr, "%Y-%m-%d").date()
+            message = taskInfo[3]
+
+            # 计算天数
+            today = datetime.today().date()
+            diff = date - today
+            day = diff.days
+
+            if message != "":
+                message = message.replace("x", "{}", 1)
+                reply_text = message.format(day)
+            elif day >= 0:
+                # 倒数日
+                reply_text = f"距离目标日{dateStr}还有{day}天"
+            else:
+                # 纪念日
+                reply_text = f"目标日{dateStr}已经过去{-day}天了"
+        else:
+            reply_text = f"未知任务{taskInfo[0]}"
+
+        # 回复
+        self.replay_use_default(reply_text, e_context)
+
+        """
         if content == "Countdown":
             target_date = datetime(2024, 1, 27).date()
             today = datetime.today().date()
@@ -58,75 +97,69 @@ class Countdown(Plugin):
 
             reply = Reply()
             reply.type = ReplyType.TEXT
-            reply.content = f"今天距离寒假还有{diff.days}天😉"
+            reply.content = f"距离xx还有{diff.days}天"
             e_context["reply"] = reply
             e_context.action = EventAction.BREAK_PASS  # 事件结束，并跳过处理context的默认逻辑
+        """
 
     def addTask(self, content, e_context: EventContext):
         # 时间信息
-        timeStr = ""
+        dateStr = ""
         # 备注内容
-        remarks = ""
+        remark = ""
         # 自定义消息内容
         custom_message = ""
 
+        logger.info(content)
         wordsArray = content.split(" ")
+        logger.info(wordsArray)
 
-        timeStr = wordsArray[0]
+        if len(wordsArray) >= 2:
+            dateStr = wordsArray[1]
 
-        if len(wordsArray) == 2:
-            remarks = wordsArray[1]
+        if len(wordsArray) >= 3:
+            remark = wordsArray[2]
 
-        elif len(wordsArray) == 3:
-            custom_message = wordsArray[2]
+        if len(wordsArray) >= 4:
+            custom_message = wordsArray[3]
 
         # taskInfo格式：
-        # 0：唯一ID
-        # 1：时间信息 - 格式为：HH:mm:ss
+        # 0：任务ID
+        # 1：时间信息 - 格式为：%Y-%m-%d    eg:2023-12-1
         # 2：备注内容
-        # 3：自定义消息内容
-        taskInfo = ("", timeStr, remarks, custom_message)
+        # 3：自定义消息内容 - 使用“x”占位，如“距离考试还有x天”
+        taskInfo = ("", dateStr, remark, custom_message)
+        # try:
+        # 构造taskInfo
         taskModel = Model(taskInfo)
-
         # 保存task
         taskId = self.taskManager.addTask(taskModel)
-
         # 返回消息
         reply_text = f"Add success{taskId}"
+        # except:
+        # 构造函数出错
+        # logger.info(dateStr)
+        # reply_text = "格式出错，请检查\n#help Countdown查看帮助信息"
+
         self.replay_use_default(reply_text, e_context)
 
     def rmTask(self, content, e_context: EventContext):
         # 任务编号
-        taskId = content.split(" ")[0]
+        taskId = content.split(" ")[1]
 
-        isExist, taskModel = ExcelTool().write_columnValue_withTaskId_toExcel(taskId, 2, "0")
-
-        taskContent = ""
-
-        if taskModel:
-            taskContent = f"{taskModel.circleTimeStr} {taskModel.timeStr} {taskModel.eventStr}"
-            if taskModel.isCron_time():
-                taskContent = f"{taskModel.circleTimeStr} {taskModel.eventStr}"
-
-        # 回消息
-        reply_text = ""
-        tempStr = ""
-
-        # 文案
-        if isExist:
-            tempStr = self.get_default_remind(TimeTaskRemindType.Cancel_Success)
-            reply_text = "⏰定时任务，取消成功~\n" + "【任务编号】：" + taskId + "\n" + "【任务详情】：" + taskContent
+        taskInfo = self.taskManager.rmTask(taskId)
+        if taskInfo:
+            reply_text = f"删除任务成功\n{taskId}\n{taskInfo}"
         else:
-            tempStr = self.get_default_remind(TimeTaskRemindType.Cancel_Failed)
-            reply_text = "⏰定时任务，取消失败😭，未找到任务编号，请核查\n" + "【任务编号】：" + taskId
+            reply_text = f"删除任务失败，未知任务{taskId}\n"
 
-        # 拼接提示
-        reply_text = reply_text + tempStr
         # 回复
         self.replay_use_default(reply_text, e_context)
 
     def lsTask(self, content, e_context: EventContext):
-        pass
+        task_dict = self.taskManager.readTask()
+        reply_text = str(task_dict)
+        self.replay_use_default(reply_text, e_context)
 
     # 使用默认的回复
     def replay_use_default(self, reply_message, e_context: EventContext):
