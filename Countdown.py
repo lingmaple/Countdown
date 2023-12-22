@@ -83,7 +83,7 @@ class Countdown(Plugin):
             if message != "":
                 # 替换占位符
                 message = message.replace("x", "{}", 1)
-                reply_text = message.format(day)
+                reply_text = message.format(abs(day))
             # 默认回复
             else:
                 if day >= 0:
@@ -136,7 +136,7 @@ class Countdown(Plugin):
             # 构造taskInfo
             taskModel = Model(taskInfo)
             # 保存task
-            self.taskManager.addTask(taskModel)
+            taskInfo = self.taskManager.addTask(taskModel)
             reply_text = f"添加任务成功\n" + self.outputTask({taskInfo})
 
         except:
@@ -163,7 +163,8 @@ class Countdown(Plugin):
     # 罗列所有任务
     def lsTask(self, content, e_context: EventContext):
         task_dict = self.taskManager.readTask()
-        reply_text = "任务列表\n" + self.outputTask(task_dict)
+        logger.info(task_dict)
+        reply_text = "任务列表\n" + self.outputTask(task_dict.values())
         self.reply(reply_text, e_context)
 
     # 输出任务
@@ -171,15 +172,15 @@ class Countdown(Plugin):
         # 输出格式
         # 【000】2023-12-01
         # 备注 自定义消息
-        content = "任务列表\n"
+        content = ""
         for taskinfo in task_dict:
-            tmp = f"【{taskinfo[0]}】{taskinfo[1]}\n" + f"{taskinfo[2]} {taskinfo[3]}\n"
+            tmp = f"【{taskinfo[0]}】{taskinfo[1]} {taskinfo[2]} {taskinfo[3]}\n"
             content = content + tmp
-        str1 = "使用提示"
-        str2 = f"添加任务：{self.command_prefix} add <时间> [备注] [消息]\n"
-        str3 = f"删除任务：{self.command_prefix} rm <任务编号>\n"
-        str4 = f"执行任务：{self.command_prefix} run <任务编号>\n"
-        str5 = f"罗列任务：{self.command_prefix} ls\n"
+        str1 = "\n使用提示\n"
+        str2 = f"【添加任务】{self.command_prefix} add <时间> [备注] [消息]\n"
+        str3 = f"【删除任务】{self.command_prefix} rm <任务编号>\n"
+        str4 = f"【执行任务】{self.command_prefix} run <任务编号>\n"
+        str5 = f"【任务列表】{self.command_prefix} ls\n"
         content = content + str1 + str2 + str3 + str4 + str5
         return content
 
@@ -193,24 +194,23 @@ class Countdown(Plugin):
         e_context.action = EventAction.BREAK_PASS  # 事件结束，并跳过处理context的默认逻辑
 
     def get_help_text(self, **kwargs):
-        str1 = f"添加任务：{self.command_prefix} add <时间> [备注] [消息]\n"
-        str2 = f"\t<时间> 必选 目标日期 格式为“年-月-日” 如“2023-12-1”\n"
-        str3 = f"\t[备注] 可选 该任务的备注 如“考试倒计时”\n"
-        str4 = f"\t[消息] 可选 该任务的消息 如“距离考试x天” 使用“x”占位\n"
-        str5 = f"\t例:{self.command_prefix} add 2023-12-1 考试倒计时 距离考试还有x天\n"
-        text1 = str1 + str2 + str3 + str5
+        str1 = f"【添加任务】{self.command_prefix} add <时间> [备注] [消息]\n"
+        str2 = f"   时间 必选 格式为“年-月-日”\n"
+        str3 = f"   备注 可选 该任务的备注\n"
+        str4 = f"   消息 可选 使用“x”占位\n"
+        str5 = f"   例:{self.command_prefix} add 2023-12-1 考试倒计时 距离考试还有x天\n\n"
+        text1 = str1 + str2 + str3 + str4 + str5
 
-        str1 = f"删除任务：{self.command_prefix} rm <任务编号>\n"
-        str2 = f"\t例:{self.command_prefix} rm 001\n"
+        str1 = f"【删除任务】{self.command_prefix} rm <编号>\n\n"
+        str2 = f"   例:{self.command_prefix} rm 001\n"
         text2 = str1 + str2
 
-        str1 = f"执行任务：{self.command_prefix} run <任务编号>\n"
-        str2 = f"\t例:{self.command_prefix} run 001\n"
+        str1 = f"【执行任务】{self.command_prefix} run <编号>\n"
+        str2 = f"   例:{self.command_prefix} run 001\n\n"
         text3 = str1 + str2
 
-        str1 = f"罗列任务：{self.command_prefix} ls\n"
-        str2 = f"\t例:{self.command_prefix} ls\n"
-        text4 = str1 + str2
+        str1 = f"【任务列表】{self.command_prefix} ls\n"
+        text4 = str1
 
-        help_text = "Countdown倒计时插件使用帮助\n" + text1 + text2 + text3 + text4
+        help_text = "Countdown倒计时插件使用帮助\n\n" + text1 + text2 + text3 + text4
         return help_text

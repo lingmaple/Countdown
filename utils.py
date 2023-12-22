@@ -70,6 +70,7 @@ class TaskManager(object):
         )
 
         JsonOP().saveJson(task_dict)
+        return task_dict[taskModel.taskId]
 
     # 删除任务
     def rmTask(self, taskId):
