@@ -1,7 +1,5 @@
 # encoding:utf-8
 
-from hashlib import md5
-from base64 import urlsafe_b64encode
 from datetime import datetime
 from common.log import logger
 from random import randint
@@ -10,56 +8,51 @@ import json
 
 
 class Model(object):
-    # Item数据排序
+    # taskInfo数据格式
     # 0：任务ID
     # 1：时间信息 - 格式为：%Y-%m-%d    eg:2023-12-1
     # 2：备注内容
     # 3：自定义消息内容 - 使用“x”占位，如“距离考试还有x天”
-    def __init__(self, item):
+    def __init__(self, taskInfo):
         super().__init__()
 
         # ID - 随机生成任务ID
         self.taskId = self.get_short_id()
 
         # 时间信息
-        timeValue = item[1]
+        timeValue = taskInfo[1]
         try:
             # 判断时间格式是否正确
             datetime.strptime(timeValue, "%Y-%m-%d")
             self.dateStr = timeValue
-            logger.info(timeValue)
+            logger.debug(timeValue)
         except:
             logger.info("时间格式错误")
             raise ValueError("时间格式错误")
 
         # 消息内容
-        self.custom_message = item[2]
+        self.custom_message = taskInfo[2]
 
         # 备注内容
-        self.remark = item[3]
-
-    # 获取格式化后的Item
-    def get_formatItem(self):
-        item = (self.taskId, self.dateStr, self.custom_message, self.remark)
-        return item
+        self.remark = taskInfo[3]
 
     # 计算任务ID
     def get_short_id(self):
         # 生成一个三位随机数作为ID
         short_id = randint(100, 999)
-        
+
         # 检查ID是否重复
         tasks = JsonOP().readJson()
         if short_id in tasks:
             short_id = self.get_short_id()
-        
+
         return short_id
 
 
 class TaskManager(object):
     def __init__(self):
         super().__init__()
-        logger.info("[TimeTaskTool] 1")
+        logger.debug("[TimeTaskTool] TaskManager")
 
     # 读取Task
     def readTask(self):
@@ -88,6 +81,7 @@ class TaskManager(object):
         return None
 
 
+# Json文件读写
 class JsonOP(object):
     __file_name = "CountdownTask.json"
     __dir_name = os.path.dirname(__file__)
